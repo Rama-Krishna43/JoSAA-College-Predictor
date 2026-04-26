@@ -69,82 +69,63 @@ st.markdown("""
 st.title('🎓 JoSAA 2026: Advanced College Predictor')
 st.markdown("---")
 
-tab1, tab2 = st.tabs(["🎯 Specific Prediction", "🔍 Find All My Matches"])
+# 1. Select Institute Category
+inst_type = st.radio("Select Institute Category", ["IIT (Indian Institute of Technology)", "Non-IIT (NITs, IIITs, GFTIs)"], horizontal=True)
 
-with tab1:
-    col1, col2 = st.columns(2)
-    with col1:
-        st.header("Personal Details")
-        user_rank = st.number_input('Enter your Category Rank', min_value=1, max_value=400000, value=10000, step=100, key='tab1_rank')
-        selected_institute = st.selectbox('Select Institute', sorted(df['Institute'].unique()), key='tab1_inst')
-        df_filtered_1 = df[df['Institute'] == selected_institute]
-        available_programs = sorted(df_filtered_1['Academic Program Name'].unique())
-        selected_program = st.selectbox('Select Academic Program', available_programs, key='tab1_prog')
+# Filter dataframe based on selection
+if "Non-IIT" in inst_type:
+    # Everything EXCEPT pure IITs
+    # Pure IITs contain "Indian Institute of Technology" but NOT "Information"
+    mask = df['Institute'].str.contains('Indian Institute of Technology') & ~df['Institute'].str.contains('Information')
+    display_df = df[~mask]
+else:
+    # Pure IITs only
+    mask = df['Institute'].str.contains('Indian Institute of Technology') & ~df['Institute'].str.contains('Information')
+    display_df = df[mask]
 
-    with col2:
-        st.header("Preferences")
-        df_filtered_2 = df_filtered_1[df_filtered_1['Academic Program Name'] == selected_program]
-        selected_quota = st.selectbox('Select Quota', sorted(df_filtered_2['Quota'].unique()), key='tab1_quota')
-        df_filtered_3 = df_filtered_2[df_filtered_2['Quota'] == selected_quota]
-        selected_seat_type = st.selectbox('Select Seat Type', sorted(df_filtered_3['Seat Type'].unique()), key='tab1_seat')
-        df_filtered_4 = df_filtered_3[df_filtered_3['Seat Type'] == selected_seat_type]
-        selected_gender = st.selectbox('Select Gender', sorted(df_filtered_4['Gender'].unique()), key='tab1_gender')
-
-    if st.button('Predict My Chance', type="primary", key='tab1_btn'):
-        try:
-            input_data = {
-                'Institute': encoders['Institute'].transform([selected_institute])[0],
-                'Academic Program Name': encoders['Academic Program Name'].transform([selected_program])[0],
-                'Quota': encoders['Quota'].transform([selected_quota])[0],
-                'Seat Type': encoders['Seat Type'].transform([selected_seat_type])[0],
-                'Gender': encoders['Gender'].transform([selected_gender])[0],
-                'Year': 2026
-            }
-            input_df = pd.DataFrame([input_data])
-            predicted_rank = model.predict(input_df)[0]
-            predicted_rank = int(round(predicted_rank))
-
-            st.markdown("### Prediction Result")
-            if user_rank <= predicted_rank:
-                st.success(f"🎉 **High Chance!** Predicted Closing Rank: **{predicted_rank:,}**")
-            else:
-                st.error(f"😞 **Low Chance.** Predicted Closing Rank: **{predicted_rank:,}**")
-        except Exception as e:
-            st.error(f"Prediction error: {e}")
-
-with tab2:
-    st.header("Explore All Possible Options")
-    st.info("Based on your rank and category, here are the colleges you are likely to get into.")
+col1, col2 = st.columns(2)
+with col1:
+    st.header("Personal Details")
+    user_rank = st.number_input('Enter your Category Rank', min_value=1, max_value=400000, value=10000, step=100)
     
-    col_a, col_b, col_c = st.columns(3)
-    with col_a:
-        search_rank = st.number_input('Your Rank', min_value=1, max_value=400000, value=10000, step=100, key='tab2_rank')
-    with col_b:
-        search_seat = st.selectbox('Seat Type', sorted(df['Seat Type'].unique()), key='tab2_seat')
-    with col_c:
-        search_gender = st.selectbox('Gender', sorted(df['Gender'].unique()), key='tab2_gender')
+    # Use the filtered display_df for the dropdowns
+    available_institutes = sorted(display_df['Institute'].unique())
+    selected_institute = st.selectbox('Select Institute', available_institutes)
     
-    search_quota = st.selectbox('Quota', sorted(df['Quota'].unique()), key='tab2_quota')
+    df_filtered_1 = display_df[display_df['Institute'] == selected_institute]
+    available_programs = sorted(df_filtered_1['Academic Program Name'].unique())
+    selected_program = st.selectbox('Select Academic Program', available_programs)
 
-    if st.button('Find My Matches', type="primary", key='tab2_btn'):
-        # Filter data for the specific category/gender/quota
-        matches_df = df[(df['Seat Type'] == search_seat) & 
-                        (df['Gender'] == search_gender) & 
-                        (df['Quota'] == search_quota) & 
-                        (df['Year'] == 2025)] # Use latest historical data as base
-        
-        # We'll use a simplified check: if user_rank < last year's closing rank
-        # In a real scenario, we could run the model on all these, but that's slow for a live app.
-        # Let's show options where their rank is within a safe margin of last year's closing rank.
-        
-        eligible = matches_df[matches_df['Closing Rank'] >= search_rank].copy()
-        eligible = eligible.sort_values(by='Closing Rank')
-        
-        if not eligible.empty:
-            st.write(f"Found **{len(eligible)}** matching options for you!")
-            st.dataframe(eligible[['Institute', 'Academic Program Name', 'Closing Rank']], use_container_width=True)
+with col2:
+    st.header("Preferences")
+    df_filtered_2 = df_filtered_1[df_filtered_1['Academic Program Name'] == selected_program]
+    selected_quota = st.selectbox('Select Quota', sorted(df_filtered_2['Quota'].unique()))
+    df_filtered_3 = df_filtered_2[df_filtered_2['Quota'] == selected_quota]
+    selected_seat_type = st.selectbox('Select Seat Type', sorted(df_filtered_3['Seat Type'].unique()))
+    df_filtered_4 = df_filtered_3[df_filtered_3['Seat Type'] == selected_seat_type]
+    selected_gender = st.selectbox('Select Gender', sorted(df_filtered_4['Gender'].unique()))
+
+if st.button('Predict My Chance', type="primary"):
+    try:
+        input_data = {
+            'Institute': encoders['Institute'].transform([selected_institute])[0],
+            'Academic Program Name': encoders['Academic Program Name'].transform([selected_program])[0],
+            'Quota': encoders['Quota'].transform([selected_quota])[0],
+            'Seat Type': encoders['Seat Type'].transform([selected_seat_type])[0],
+            'Gender': encoders['Gender'].transform([selected_gender])[0],
+            'Year': 2026
+        }
+        input_df = pd.DataFrame([input_data])
+        predicted_rank = model.predict(input_df)[0]
+        predicted_rank = int(round(predicted_rank))
+
+        st.markdown("### Prediction Result")
+        if user_rank <= predicted_rank:
+            st.success(f"🎉 **High Chance!** Predicted Closing Rank: **{predicted_rank:,}**")
         else:
-            st.warning("No matches found for this rank in these categories. Try broadening your filters.")
+            st.error(f"😞 **Low Chance.** Predicted Closing Rank: **{predicted_rank:,}**")
+    except Exception as e:
+        st.error(f"Prediction error: {e}")
 
 # --- 4. Fully Interactive Data Dashboard ---
 st.header("Interactive Data Dashboard (Based on 2023-2025 Data)")
