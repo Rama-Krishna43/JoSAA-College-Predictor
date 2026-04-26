@@ -36,61 +36,115 @@ model, encoders, df = load_assets()
 
 
 # --- 2. Create the User Interface ---
-st.set_page_config(page_title="JEE College Predictor", layout="wide")
-st.title('🎓 JoSAA 2026: College Predictor')
-st.markdown("Select your preferences to predict the closing rank based on historical JOSAA data.")
+st.set_page_config(page_title="JoSAA 2026 College Predictor", layout="wide", initial_sidebar_state="expanded")
 
-institutes = sorted(df['Institute'].unique())
-col1, col2 = st.columns(2)
-with col1:
-    st.header("Your Details")
-    user_rank = st.number_input('Enter your JEE Rank as per your category', min_value=1, max_value=400000, value=10000, step=100)
-    selected_institute = st.selectbox('Select Institute', institutes)
-    df_filtered_1 = df[df['Institute'] == selected_institute]
-    available_programs = sorted(df_filtered_1['Academic Program Name'].unique())
-    selected_program = st.selectbox('Select Academic Program', available_programs)
+# Premium CSS Styling
+st.markdown("""
+    <style>
+    .main {
+        background-color: #f8f9fa;
+    }
+    .stButton>button {
+        width: 100%;
+        border-radius: 10px;
+        height: 3em;
+        background-color: #007bff;
+        color: white;
+        font-weight: bold;
+    }
+    .prediction-card {
+        padding: 20px;
+        border-radius: 15px;
+        background-color: white;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    h1 {
+        color: #1e3a8a;
+        font-weight: 800;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-with col2:
-    st.header("Category and Quota")
-    df_filtered_2 = df_filtered_1[df_filtered_1['Academic Program Name'] == selected_program]
-    available_quotas = sorted(df_filtered_2['Quota'].unique())
-    selected_quota = st.selectbox('Select Quota', available_quotas)
-    df_filtered_3 = df_filtered_2[df_filtered_2['Quota'] == selected_quota]
-    available_seat_types = sorted(df_filtered_3['Seat Type'].unique())
-    selected_seat_type = st.selectbox('Select Seat Type', available_seat_types)
-    df_filtered_4 = df_filtered_3[df_filtered_3['Seat Type'] == selected_seat_type]
-    available_genders = sorted(df_filtered_4['Gender'].unique())
-    selected_gender = st.selectbox('Select Gender', available_genders)
+st.title('🎓 JoSAA 2026: Advanced College Predictor')
+st.markdown("---")
 
-# --- 3. Make Prediction ---
-if st.button('Predict Closing Rank', type="primary"):
-    # Create input data in the correct order for the model
-    # Features: ['Institute', 'Academic Program Name', 'Quota', 'Seat Type', 'Gender', 'Year']
+tab1, tab2 = st.tabs(["🎯 Specific Prediction", "🔍 Find All My Matches"])
+
+with tab1:
+    col1, col2 = st.columns(2)
+    with col1:
+        st.header("Personal Details")
+        user_rank = st.number_input('Enter your Category Rank', min_value=1, max_value=400000, value=10000, step=100, key='tab1_rank')
+        selected_institute = st.selectbox('Select Institute', sorted(df['Institute'].unique()), key='tab1_inst')
+        df_filtered_1 = df[df['Institute'] == selected_institute]
+        available_programs = sorted(df_filtered_1['Academic Program Name'].unique())
+        selected_program = st.selectbox('Select Academic Program', available_programs, key='tab1_prog')
+
+    with col2:
+        st.header("Preferences")
+        df_filtered_2 = df_filtered_1[df_filtered_1['Academic Program Name'] == selected_program]
+        selected_quota = st.selectbox('Select Quota', sorted(df_filtered_2['Quota'].unique()), key='tab1_quota')
+        df_filtered_3 = df_filtered_2[df_filtered_2['Quota'] == selected_quota]
+        selected_seat_type = st.selectbox('Select Seat Type', sorted(df_filtered_3['Seat Type'].unique()), key='tab1_seat')
+        df_filtered_4 = df_filtered_3[df_filtered_3['Seat Type'] == selected_seat_type]
+        selected_gender = st.selectbox('Select Gender', sorted(df_filtered_4['Gender'].unique()), key='tab1_gender')
+
+    if st.button('Predict My Chance', type="primary", key='tab1_btn'):
+        try:
+            input_data = {
+                'Institute': encoders['Institute'].transform([selected_institute])[0],
+                'Academic Program Name': encoders['Academic Program Name'].transform([selected_program])[0],
+                'Quota': encoders['Quota'].transform([selected_quota])[0],
+                'Seat Type': encoders['Seat Type'].transform([selected_seat_type])[0],
+                'Gender': encoders['Gender'].transform([selected_gender])[0],
+                'Year': 2026
+            }
+            input_df = pd.DataFrame([input_data])
+            predicted_rank = model.predict(input_df)[0]
+            predicted_rank = int(round(predicted_rank))
+
+            st.markdown("### Prediction Result")
+            if user_rank <= predicted_rank:
+                st.success(f"🎉 **High Chance!** Predicted Closing Rank: **{predicted_rank:,}**")
+            else:
+                st.error(f"😞 **Low Chance.** Predicted Closing Rank: **{predicted_rank:,}**")
+        except Exception as e:
+            st.error(f"Prediction error: {e}")
+
+with tab2:
+    st.header("Explore All Possible Options")
+    st.info("Based on your rank and category, here are the colleges you are likely to get into.")
     
-    try:
-        input_data = {
-            'Institute': encoders['Institute'].transform([selected_institute])[0],
-            'Academic Program Name': encoders['Academic Program Name'].transform([selected_program])[0],
-            'Quota': encoders['Quota'].transform([selected_quota])[0],
-            'Seat Type': encoders['Seat Type'].transform([selected_seat_type])[0],
-            'Gender': encoders['Gender'].transform([selected_gender])[0],
-            'Year': df['Year'].max() + 1
-        }
-        
-        input_df = pd.DataFrame([input_data])
-        
-        predicted_rank = model.predict(input_df)[0]
-        predicted_rank = int(round(predicted_rank))
+    col_a, col_b, col_c = st.columns(3)
+    with col_a:
+        search_rank = st.number_input('Your Rank', min_value=1, max_value=400000, value=10000, step=100, key='tab2_rank')
+    with col_b:
+        search_seat = st.selectbox('Seat Type', sorted(df['Seat Type'].unique()), key='tab2_seat')
+    with col_c:
+        search_gender = st.selectbox('Gender', sorted(df['Gender'].unique()), key='tab2_gender')
+    
+    search_quota = st.selectbox('Quota', sorted(df['Quota'].unique()), key='tab2_quota')
 
-        st.subheader('Prediction Result')
-        if user_rank <= predicted_rank:
-            st.success(f"🎉 **High Chance!**")
-            st.markdown(f"The predicted closing rank is **{predicted_rank:,}**. Your rank of **{user_rank:,}** is within the predicted range.")
+    if st.button('Find My Matches', type="primary", key='tab2_btn'):
+        # Filter data for the specific category/gender/quota
+        matches_df = df[(df['Seat Type'] == search_seat) & 
+                        (df['Gender'] == search_gender) & 
+                        (df['Quota'] == search_quota) & 
+                        (df['Year'] == 2025)] # Use latest historical data as base
+        
+        # We'll use a simplified check: if user_rank < last year's closing rank
+        # In a real scenario, we could run the model on all these, but that's slow for a live app.
+        # Let's show options where their rank is within a safe margin of last year's closing rank.
+        
+        eligible = matches_df[matches_df['Closing Rank'] >= search_rank].copy()
+        eligible = eligible.sort_values(by='Closing Rank')
+        
+        if not eligible.empty:
+            st.write(f"Found **{len(eligible)}** matching options for you!")
+            st.dataframe(eligible[['Institute', 'Academic Program Name', 'Closing Rank']], use_container_width=True)
         else:
-            st.error(f"😞 **Low Chance.**")
-            st.markdown(f"The predicted closing rank is **{predicted_rank:,}**. Your rank of **{user_rank:,}** is higher than the predicted closing rank.")
-    except Exception as e:
-        st.error(f"An error occurred during prediction: {e}")
+            st.warning("No matches found for this rank in these categories. Try broadening your filters.")
 
 # --- 4. Fully Interactive Data Dashboard ---
 st.header("Interactive Data Dashboard (Based on 2023-2025 Data)")
