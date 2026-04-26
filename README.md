@@ -2,6 +2,9 @@
 
 A machine learning-based tool designed to help JEE Aspirants predict their potential college and branch based on historical JoSAA opening and closing ranks from **2023 to 2025**.
 
+**Live Demo:** [JoSAA College Predictor](https://josaa-college-predictor-ja2sy3qfq6dhjyhtsujwj3.streamlit.app/)
+
+
 ## 🚀 Features
 - **Accurate Predictions**: Uses a Random Forest Regressor to predict closing ranks with high accuracy.
 - **Interactive Dashboard**: Explore trends across NITs, IIITs, and GFTIs using Altair-powered visualizations.
