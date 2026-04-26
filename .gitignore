@@ -5,6 +5,12 @@ model_columns.pkl
 # Compressed Model (Allowed - under 100MB)
 !college_predictor_compressed.joblib
 !encoders.pkl
+# Datasets (Allowed for web deployment)
+!josaa_2023_all_institutes_full.csv
+!josaa_2024_reparsed_all_institutes.csv
+!josaa_2025_opening_closing_ranks_all_institutes.csv
+
+# Ignore other/combined csvs
 *.csv
 combined_josaa_data_2023_to_2025.csv
 
