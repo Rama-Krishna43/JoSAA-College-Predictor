@@ -36,14 +36,21 @@ model, encoders, df = load_assets()
 
 
 # --- 2. Create the User Interface ---
-st.set_page_config(page_title="JoSAA 2026 College Predictor", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="JoSAA 2026 College Predictor | JEE Main & Advanced Tool",
+    page_icon="🎓",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://github.com/Rama-Krishna43/JoSAA-College-Predictor',
+        'Report a bug': "https://github.com/Rama-Krishna43/JoSAA-College-Predictor/issues",
+        'About': "# JoSAA 2026 College Predictor\nPredict your JEE college and branch based on 2023-2025 historical data."
+    }
+)
 
 # Premium CSS Styling
 st.markdown("""
     <style>
-    .main {
-        background-color: #f8f9fa;
-    }
     .stButton>button {
         width: 100%;
         border-radius: 10px;
@@ -52,16 +59,13 @@ st.markdown("""
         color: white;
         font-weight: bold;
     }
-    .prediction-card {
-        padding: 20px;
-        border-radius: 15px;
-        background-color: white;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
     h1 {
         color: #1e3a8a;
         font-weight: 800;
+        text-align: center;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -231,4 +235,14 @@ with st.expander("Click to see visualizations"):
 
         st.altair_chart(chart_quota, use_container_width=True)
 
-    
+# --- 5. SEO & Footer ---
+st.markdown("---")
+st.markdown("""
+### 🔍 About JoSAA 2026 College Predictor
+This tool is designed to help students participating in **JoSAA 2026 Counseling** for **JEE Main** and **JEE Advanced**. 
+By analyzing historical opening and closing ranks from 2023, 2024, and 2025 across all **NITs, IIITs, GFTIs, and IITs**, our machine learning model provides accurate predictions for your best college options.
+
+**Keywords:** JoSAA 2026, JEE Main College Predictor, JEE Advanced Branch Predictor, NIT Predictor, IIIT Predictor, IIT Closing Ranks, Engineering Admission 2026.
+
+Built with ❤️ by [Rama-Krishna43](https://github.com/Rama-Krishna43)
+""")
