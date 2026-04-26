@@ -1,8 +1,10 @@
-# ML Model
+# ML Model (Ignored original large files)
 college_predictor.pkl
 model_columns.pkl
 
-# Datasets
+# Compressed Model (Allowed - under 100MB)
+!college_predictor_compressed.joblib
+!encoders.pkl
 *.csv
 combined_josaa_data_2023_to_2025.csv
 

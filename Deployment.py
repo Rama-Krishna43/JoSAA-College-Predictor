@@ -1,36 +1,38 @@
 import streamlit as st
 import pandas as pd
+import joblib
 import pickle
-import altair as alt  # The main visualization library
+import altair as alt
 import warnings
 
 warnings.filterwarnings('ignore')
 
-# --- 1. Load the Saved Model, Columns, and Data ---
-@st.cache_data  # Add caching to speed up data loading
-def load_data():
-    with open('college_predictor.pkl', 'rb') as file:
-        model = pickle.load(file)
-    with open('model_columns.pkl', 'rb') as file:
-        model_columns = pickle.load(file)
-
+# --- 1. Load the Saved Model, Encoders, and Data ---
+@st.cache_resource  # Use cache_resource for model/encoders
+def load_assets():
+    model = joblib.load('college_predictor_compressed.joblib')
+    with open('encoders.pkl', 'rb') as f:
+        encoders = pickle.load(f)
+    
+    # Load raw data for the dashboard and dropdowns
     df_2023 = pd.read_csv('josaa_2023_all_institutes_full.csv')
     df_2024 = pd.read_csv('josaa_2024_reparsed_all_institutes.csv')
     df_2025 = pd.read_csv('josaa_2025_opening_closing_ranks_all_institutes.csv')
-
+    
     df_2023['Year'] = 2023
     df_2024['Year'] = 2024
     df_2025['Year'] = 2025
-
+    
     df = pd.concat([df_2023, df_2024, df_2025], ignore_index=True)
     df.dropna(subset=['Institute', 'Academic Program Name', 'Quota', 'Seat Type', 'Gender'], inplace=True)
-
+    
     df['Opening Rank'] = pd.to_numeric(df['Opening Rank'].astype(str).str.replace('P', ''), errors='coerce')
     df['Closing Rank'] = pd.to_numeric(df['Closing Rank'].astype(str).str.replace('P', ''), errors='coerce')
     df.dropna(subset=['Opening Rank', 'Closing Rank'], inplace=True)
-    return model, model_columns, df
+    
+    return model, encoders, df
 
-model, model_columns, df = load_data()
+model, encoders, df = load_assets()
 
 
 # --- 2. Create the User Interface ---
@@ -62,32 +64,33 @@ with col2:
 
 # --- 3. Make Prediction ---
 if st.button('Predict Closing Rank', type="primary"):
-    input_df = pd.DataFrame(columns=model_columns, index=[0])
-    input_df.fillna(0, inplace=True)
-    input_Dyear = df['Year'].max() + 1
-    if 'Year' in input_df.columns:
-        input_df['Year'] = input_Dyear
-    if f'Institute_{selected_institute}' in input_df.columns:
-        input_df[f'Institute_{selected_institute}'] = 1
-    if f'Academic Program Name_{selected_program}' in input_df.columns:
-        input_df[f'Academic Program Name_{selected_program}'] = 1
-    if f'Quota_{selected_quota}' in input_df.columns:
-        input_df[f'Quota_{selected_quota}'] = 1
-    if f'Seat Type_{selected_seat_type}' in input_df.columns:
-        input_df[f'Seat Type_{selected_seat_type}'] = 1
-    if f'Gender_{selected_gender}' in input_df.columns:
-        input_df[f'Gender_{selected_gender}'] = 1
+    # Create input data in the correct order for the model
+    # Features: ['Institute', 'Academic Program Name', 'Quota', 'Seat Type', 'Gender', 'Year']
+    
+    try:
+        input_data = {
+            'Institute': encoders['Institute'].transform([selected_institute])[0],
+            'Academic Program Name': encoders['Academic Program Name'].transform([selected_program])[0],
+            'Quota': encoders['Quota'].transform([selected_quota])[0],
+            'Seat Type': encoders['Seat Type'].transform([selected_seat_type])[0],
+            'Gender': encoders['Gender'].transform([selected_gender])[0],
+            'Year': df['Year'].max() + 1
+        }
+        
+        input_df = pd.DataFrame([input_data])
+        
+        predicted_rank = model.predict(input_df)[0]
+        predicted_rank = int(round(predicted_rank))
 
-    predicted_rank = model.predict(input_df)[0]
-    predicted_rank = int(round(predicted_rank))
-
-    st.subheader('Prediction Result')
-    if user_rank <= predicted_rank:
-        st.success(f"🎉 **High Chance!**")
-        st.markdown(f"The predicted closing rank is **{predicted_rank:,}**. Your rank of **{user_rank:,}** is within the predicted range.")
-    else:
-        st.error(f"😞 **Low Chance.**")
-        st.markdown(f"The predicted closing rank is **{predicted_rank:,}**. Your rank of **{user_rank:,}** is higher than the predicted closing rank.")
+        st.subheader('Prediction Result')
+        if user_rank <= predicted_rank:
+            st.success(f"🎉 **High Chance!**")
+            st.markdown(f"The predicted closing rank is **{predicted_rank:,}**. Your rank of **{user_rank:,}** is within the predicted range.")
+        else:
+            st.error(f"😞 **Low Chance.**")
+            st.markdown(f"The predicted closing rank is **{predicted_rank:,}**. Your rank of **{user_rank:,}** is higher than the predicted closing rank.")
+    except Exception as e:
+        st.error(f"An error occurred during prediction: {e}")
 
 # --- 4. Fully Interactive Data Dashboard ---
 st.header("Interactive Data Dashboard (Based on 2023-2025 Data)")
