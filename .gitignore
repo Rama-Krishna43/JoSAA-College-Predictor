@@ -1,0 +1,22 @@
+# ML Model
+college_predictor.pkl
+model_columns.pkl
+
+# Datasets
+*.csv
+combined_josaa_data_2023_to_2025.csv
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv
+venv/
+ENV/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Visualizations
+residuals_histogram.png
+scatterplot_actual_vs_predicted.png
